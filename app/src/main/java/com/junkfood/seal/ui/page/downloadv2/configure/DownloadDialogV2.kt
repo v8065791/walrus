@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,11 +57,11 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.SheetValue
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,8 +97,6 @@ import com.junkfood.seal.ui.component.DrawerSheetSubtitle
 import com.junkfood.seal.ui.component.OutlinedButtonWithIcon
 import com.junkfood.seal.ui.component.SealModalBottomSheet
 import com.junkfood.seal.ui.component.SealModalBottomSheetM2Variant
-import com.junkfood.seal.ui.component.SingleChoiceChip
-import com.junkfood.seal.ui.component.SingleChoiceSegmentedButton
 import com.junkfood.seal.ui.component.VideoFilterChip
 import com.junkfood.seal.ui.page.command.TemplatePickerDialog
 import com.junkfood.seal.ui.page.downloadv2.configure.ActionButton.Download
@@ -143,6 +140,7 @@ import com.junkfood.seal.util.ToastUtil
 import com.junkfood.seal.util.USE_CUSTOM_AUDIO_PRESET
 import com.junkfood.seal.util.VIDEO_FORMAT
 import com.junkfood.seal.util.VIDEO_QUALITY
+import com.junkfood.seal.util.toYouTubeChannelSource
 import kotlinx.coroutines.launch
 
 @Composable
@@ -637,12 +635,17 @@ private fun ConfigurePage(
                         downloadType = selectedType,
                     )
                 )
-                onActionPost(
-                    Action.DownloadWithPreset(
-                        urlList = listOf(url),
-                        preferences = preferences.copy(extractAudio = selectedType == Audio),
+                val resolvedPreferences = preferences.copy(extractAudio = selectedType == Audio)
+                if (url.toYouTubeChannelSource() != null) {
+                    onActionPost(Action.FetchPlaylist(url = url, preferences = resolvedPreferences))
+                } else {
+                    onActionPost(
+                        Action.DownloadWithPreset(
+                            urlList = listOf(url),
+                            preferences = resolvedPreferences,
+                        )
                     )
-                )
+                }
             },
             onFetchInfo = {
                 onConfigSave(
@@ -651,7 +654,7 @@ private fun ConfigurePage(
                         downloadType = selectedType,
                     )
                 )
-                if (selectedType == Playlist) {
+                if (selectedType == Playlist || url.toYouTubeChannelSource() != null) {
                     onActionPost(Action.FetchPlaylist(url = url, preferences = preferences))
                 } else {
                     onActionPost(
@@ -942,34 +945,22 @@ internal fun Header(modifier: Modifier = Modifier, icon: ImageVector, title: Str
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun DownloadTypeSelectionGroup(
     modifier: Modifier = Modifier,
     typeEntries: List<DownloadType>,
     selectedType: DownloadType?,
     onSelect: (DownloadType) -> Unit,
 ) {
-    val typeCount = typeEntries.size
-    if (typeCount == DownloadType.entries.size) {
-        LazyRow(modifier = modifier) {
-            items(typeEntries) { type ->
-                SingleChoiceChip(
-                    selected = selectedType == type,
-                    label = type.label(),
-                    onClick = { onSelect(type) },
-                )
-            }
-        }
-    } else {
-        SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
-            typeEntries.forEachIndexed { index, type ->
-                SingleChoiceSegmentedButton(
-                    selected = selectedType == type,
-                    onClick = { onSelect(type) },
-                    shape = SegmentedButtonDefaults.itemShape(index, typeCount),
-                ) {
-                    Text(text = type.label())
-                }
-            }
+    if (typeEntries.isEmpty()) return
+    val selectedIndex = typeEntries.indexOf(selectedType).coerceAtLeast(0)
+    PrimaryTabRow(modifier = modifier.fillMaxWidth(), selectedTabIndex = selectedIndex) {
+        typeEntries.forEach { type ->
+            Tab(
+                selected = selectedType == type,
+                onClick = { onSelect(type) },
+                text = { Text(text = type.label(), maxLines = 1) },
+            )
         }
     }
 }

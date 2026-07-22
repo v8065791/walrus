@@ -3,6 +3,7 @@ package com.junkfood.seal.ui.page.downloadv2.configure
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,13 +20,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipBox
@@ -71,12 +75,12 @@ import com.junkfood.seal.util.AUDIO_QUALITY
 import com.junkfood.seal.util.DownloadType.Audio
 import com.junkfood.seal.util.DownloadType.Video
 import com.junkfood.seal.util.DownloadUtil
-import com.junkfood.seal.util.PlaylistResult
 import com.junkfood.seal.util.PreferenceUtil.updateBoolean
 import com.junkfood.seal.util.PreferenceUtil.updateInt
 import com.junkfood.seal.util.USE_CUSTOM_AUDIO_PRESET
 import com.junkfood.seal.util.VIDEO_FORMAT
 import com.junkfood.seal.util.VIDEO_QUALITY
+import com.junkfood.seal.util.YouTubeChannelTab
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -85,6 +89,7 @@ import org.koin.compose.koinInject
 fun PlaylistSelectionPage(
     state: SelectionState.PlaylistSelection,
     downloader: DownloaderV2 = koinInject(),
+    onChannelTabSelected: (YouTubeChannelTab) -> Unit = {},
     onDismissRequest: () -> Unit = {},
 ) {
     var preferences by remember {
@@ -101,7 +106,7 @@ fun PlaylistSelectionPage(
             skipHalfExpanded = true,
         )
 
-    LaunchedEffect(state) { sheetState.show() }
+    LaunchedEffect(Unit) { sheetState.show() }
     val scope = rememberCoroutineScope()
     val onBack: () -> Unit = {
         scope.launch { sheetState.hide() }.invokeOnCompletion { onDismissRequest() }
@@ -114,7 +119,11 @@ fun PlaylistSelectionPage(
     val configureSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     SealModalBottomSheetM2Variant(sheetState = sheetState, sheetGesturesEnabled = false) {
-        PlaylistSelectionPageImpl(result = state.result, onDismissRequest = onBack) {
+        PlaylistSelectionPageImpl(
+            state = state,
+            onChannelTabSelected = onChannelTabSelected,
+            onDismissRequest = onBack,
+        ) {
             taskList = it
             showConfigurationSheet = true
         }
@@ -216,14 +225,19 @@ fun PlaylistSelectionPage(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistSelectionPageImpl(
-    result: PlaylistResult,
+    state: SelectionState.PlaylistSelection,
+    onChannelTabSelected: (YouTubeChannelTab) -> Unit = {},
     onDismissRequest: () -> Unit = {},
     onConfirmSelection: (List<TaskFactory.TaskWithState>) -> Unit,
 ) {
     val view = LocalView.current
+    val result = state.result
 
     val selectedItems =
         rememberSaveable(
+            result.originalUrl,
+            result.webpageUrl,
+            state.selectedChannelTab,
             saver =
                 listSaver<MutableList<Int>, Int>(
                     save = {
@@ -234,13 +248,15 @@ fun PlaylistSelectionPageImpl(
                         }
                     },
                     restore = { it.toMutableStateList() },
-                )
+                ),
         ) {
             mutableStateListOf()
         }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     var showDialog by remember { mutableStateOf(false) }
     val playlistCount = result.entries?.size ?: 0
+
+    LaunchedEffect(result.originalUrl, result.webpageUrl) { showDialog = false }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -277,7 +293,7 @@ fun PlaylistSelectionPageImpl(
                                 )
                             )
                         },
-                        enabled = selectedItems.isNotEmpty(),
+                        enabled = selectedItems.isNotEmpty() && state.loadingChannelTab == null,
                     ) {
                         Text(text = stringResource(R.string.start_download))
                     }
@@ -299,6 +315,7 @@ fun PlaylistSelectionPageImpl(
                                     selectedItems.size == playlistCount && selectedItems.size != 0,
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() },
+                                enabled = playlistCount > 0 && state.loadingChannelTab == null,
                                 onClick = {
                                     view.slightHapticFeedback()
                                     if (selectedItems.size == playlistCount) selectedItems.clear()
@@ -340,39 +357,70 @@ fun PlaylistSelectionPageImpl(
         },
     ) { paddings ->
         Column(modifier = Modifier.padding(paddings)) {
-            LazyColumn {
-                item {
-                    Text(
-                        modifier = Modifier.padding(16.dp),
-                        text =
-                            stringResource(R.string.download_selection_desc).format(result.title),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                itemsIndexed(items = result.entries ?: emptyList()) { indexFromZero, entry ->
-                    val index = indexFromZero + 1
-                    TooltipBox(
-                        state = rememberTooltipState(),
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
-                        tooltip = { PlainTooltip { Text(text = entry.title ?: index.toString()) } },
-                    ) {
-                        PlaylistItem(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            imageModel = entry.thumbnails?.lastOrNull()?.url ?: "",
-                            title = entry.title ?: index.toString(),
-                            author =
-                                entry.channel
-                                    ?: entry.uploader
-                                    ?: result.channel
-                                    ?: result.uploader,
-                            selected = selectedItems.contains(index),
-                            onClick = {
-                                if (selectedItems.contains(index)) selectedItems.remove(index)
-                                else selectedItems.add(index)
-                            },
+            if (state.channelSource != null) {
+                val displayedTab = state.loadingChannelTab ?: state.selectedChannelTab
+                val selectedTabIndex =
+                    YouTubeChannelTab.entries.indexOf(displayedTab).coerceAtLeast(0)
+                PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
+                    YouTubeChannelTab.entries.forEach { tab ->
+                        Tab(
+                            selected = displayedTab == tab,
+                            enabled = state.loadingChannelTab == null,
+                            onClick = { onChannelTabSelected(tab) },
+                            text = { Text(tab.label()) },
                         )
                     }
+                }
+            }
+            state.channelTabError?.let { error ->
+                Text(
+                    text = stringResource(R.string.channel_tab_load_failed, error),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn {
+                    item {
+                        Text(
+                            modifier = Modifier.padding(16.dp),
+                            text =
+                                stringResource(R.string.download_selection_desc)
+                                    .format(result.title),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    itemsIndexed(items = result.entries ?: emptyList()) { indexFromZero, entry ->
+                        val index = indexFromZero + 1
+                        TooltipBox(
+                            state = rememberTooltipState(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                            tooltip = {
+                                PlainTooltip { Text(text = entry.title ?: index.toString()) }
+                            },
+                        ) {
+                            PlaylistItem(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                imageModel = entry.thumbnails?.lastOrNull()?.url ?: "",
+                                title = entry.title ?: index.toString(),
+                                author =
+                                    entry.channel
+                                        ?: entry.uploader
+                                        ?: result.channel
+                                        ?: result.uploader,
+                                selected = selectedItems.contains(index),
+                                onClick = {
+                                    if (selectedItems.contains(index)) selectedItems.remove(index)
+                                    else selectedItems.add(index)
+                                },
+                            )
+                        }
+                    }
+                }
+                if (state.loadingChannelTab != null) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
@@ -388,3 +436,13 @@ fun PlaylistSelectionPageImpl(
         )
     }
 }
+
+@Composable
+private fun YouTubeChannelTab.label(): String =
+    stringResource(
+        when (this) {
+            YouTubeChannelTab.Videos -> R.string.channel_videos
+            YouTubeChannelTab.Shorts -> R.string.channel_shorts
+            YouTubeChannelTab.Live -> R.string.channel_live
+        }
+    )

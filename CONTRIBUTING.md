@@ -2,7 +2,7 @@
 
 Before reading, you may know what [yt-dlp](https://github.com/yt-dlp/yt-dlp) is and what it does. In short, it's a CLI (Command Line Interface) program written in python, which lets you download videos from [1000+ websites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
 
-For bug reports and feature requests, please search in issues first (including the closed ones). If there're no duplicates, feel free to [submit an issue](https://github.com/JunkFood02/Seal/issues/new) with an issue template.
+For bug reports and feature requests, search existing issues first. If there are no duplicates, [submit an issue](https://github.com/v8065791/walrus/issues/new) with an issue template.
 
 **We'll probably ignore and close your issue if it's not using the existing templates or doesn't contain sufficient description.**
 
@@ -22,11 +22,11 @@ When submitting a bug report, please make sure your issue contains **enough** in
 
 ## Feature Request
 
-Seal is and will remain a simple GUI for yt-dlp, providing most of the functionality of yt-dlp as is, without modifications. Thus, **we'll not take requests for features that yt-dlp does not support.**
+Walrus is a GUI for yt-dlp and generally exposes functionality supported by yt-dlp itself.
 
 The app has two download modes: 
 
-- General mode: Save as audio, download playlist, and many other options that can be used individually or combined for normal download tasks. Once the download is complete, Seal will scan the files into the system media library, and store them in the download history.
+- General mode: Save as audio, download playlists, and combine options for normal download tasks. Once complete, Walrus scans files into the system media library and stores them in download history.
 - Custom command mode: For advanced usage of yt-dlp, a user can create and store multiple command templates in the app, then select and use one of them directly to execute the yt-dlp command like in a terminal. In this mode, all of the GUI options and features in the general mode will be disabled.
 
 Since most of the functions can be implemented in custom command mode, the "feature request" would be treated as adding a shortcut to the general mode. However, not all feature requests will be accepted and implemented in the app. [Why not add an option for that?](https://neugierig.org/software/blog/2018/07/options.html)
@@ -43,7 +43,7 @@ To avoid multiple pull requests resolving the same issue, let others know you ar
 
 ## New contributors
 
-Scan through our [existing issues](https://github.com/JunkFood02/Seal/issues) to find one that interests you. The [👋 good first issue](https://github.com/JunkFood02/Seal/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) is a good place to start exploring issues that are up-for-grab for newcomers. (Do not hesitate to ask for more details or clarifying questions on the issue!)
+Scan the [existing issues](https://github.com/v8065791/walrus/issues) for work that interests you. Ask for clarification on the issue before starting a large change.
 
 
 
