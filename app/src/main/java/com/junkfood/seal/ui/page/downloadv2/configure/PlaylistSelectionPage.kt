@@ -284,13 +284,21 @@ fun PlaylistSelectionPageImpl(
                         onClick = {
                             view.slightHapticFeedback()
                             onConfirmSelection(
-                                TaskFactory.createWithPlaylistResult(
-                                    playlistUrl =
-                                        result.originalUrl ?: result.webpageUrl.toString(),
-                                    indexList = selectedItems,
-                                    playlistResult = result,
-                                    preferences = DownloadUtil.DownloadPreferences.EMPTY,
-                                )
+                                if (state.channelSource != null) {
+                                    TaskFactory.createWithChannelResult(
+                                        indexList = selectedItems,
+                                        playlistResult = result,
+                                        preferences = DownloadUtil.DownloadPreferences.EMPTY,
+                                    )
+                                } else {
+                                    TaskFactory.createWithPlaylistResult(
+                                        playlistUrl =
+                                            result.originalUrl ?: result.webpageUrl.toString(),
+                                        indexList = selectedItems,
+                                        playlistResult = result,
+                                        preferences = DownloadUtil.DownloadPreferences.EMPTY,
+                                    )
+                                }
                             )
                         },
                         enabled = selectedItems.isNotEmpty() && state.loadingChannelTab == null,

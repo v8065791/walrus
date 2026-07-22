@@ -5,6 +5,7 @@ import com.junkfood.seal.download.Task.DownloadState.Idle
 import com.junkfood.seal.download.Task.DownloadState.ReadyWithInfo
 import com.junkfood.seal.util.DownloadUtil.DownloadPreferences
 import com.junkfood.seal.util.Format
+import com.junkfood.seal.util.PlaylistEntry
 import com.junkfood.seal.util.PlaylistResult
 import com.junkfood.seal.util.VideoClip
 import com.junkfood.seal.util.VideoInfo
@@ -94,14 +95,7 @@ object TaskFactory {
 
         val taskList =
             indexEntryMap.map { (index, entry) ->
-                val viewState =
-                    Task.ViewState(
-                        url = entry.url ?: "",
-                        title = entry.title ?: "${playlistResult.title} - $index",
-                        duration = entry.duration?.roundToInt() ?: 0,
-                        uploader = entry.uploader ?: entry.channel ?: playlistResult.channel ?: "",
-                        thumbnailUrl = (entry.thumbnails?.lastOrNull()?.url) ?: "",
-                    )
+                val viewState = entry.toViewState(playlistResult, index)
                 val task =
                     Task(
                         url = playlistUrl,
@@ -114,6 +108,52 @@ object TaskFactory {
             }
 
         return taskList
+    }
+
+    /**
+     * Creates one independent URL task for each selected channel video. Reusing the channel URL
+     * here can make yt-dlp expand the selection as a grouped playlist download.
+     */
+    @CheckResult
+    fun createWithChannelResult(
+        indexList: List<Int>,
+        playlistResult: PlaylistResult,
+        preferences: DownloadPreferences,
+    ): List<TaskWithState> {
+        checkNotNull(playlistResult.entries)
+        val indexEntryMap = indexList.associateWith { index -> playlistResult.entries[index - 1] }
+
+        return indexEntryMap.map { (index, entry) ->
+            val videoUrl = entry.toYouTubeVideoUrl()
+            val viewState = entry.toViewState(playlistResult, index).copy(url = videoUrl)
+            val task = Task(url = videoUrl, preferences = preferences)
+            val state = Task.State(downloadState = Idle, videoInfo = null, viewState = viewState)
+            TaskWithState(task, state)
+        }
+    }
+
+    private fun PlaylistEntry.toViewState(
+        playlistResult: PlaylistResult,
+        index: Int,
+    ): Task.ViewState =
+        Task.ViewState(
+            url = url ?: "",
+            title = title ?: "${playlistResult.title} - $index",
+            duration = duration?.roundToInt() ?: 0,
+            uploader = uploader ?: channel ?: playlistResult.channel ?: "",
+            thumbnailUrl = thumbnails?.lastOrNull()?.url ?: "",
+        )
+
+    private fun PlaylistEntry.toYouTubeVideoUrl(): String {
+        val extractedUrl = url?.takeIf(String::isNotBlank)
+        return when {
+            extractedUrl?.startsWith("https://") == true ||
+                extractedUrl?.startsWith("http://") == true -> extractedUrl
+            extractedUrl?.startsWith("/") == true -> "https://www.youtube.com$extractedUrl"
+            extractedUrl != null -> "https://www.youtube.com/watch?v=$extractedUrl"
+            !id.isNullOrBlank() -> "https://www.youtube.com/watch?v=$id"
+            else -> error("Selected channel entry has no video URL")
+        }
     }
 
     data class TaskWithState(val task: Task, val state: Task.State)
