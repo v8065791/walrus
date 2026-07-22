@@ -9,6 +9,7 @@ Walrus is an Android video and audio downloader powered by [yt-dlp](https://gith
 - Download video, audio, playlists, subtitles, and metadata through a Compose-based interface.
 - Create, save, and run custom yt-dlp command templates.
 - Keep download history and update the bundled yt-dlp runtime.
+- Optionally delete media and its related yt-dlp sidecar files together from history.
 
 ## Build
 

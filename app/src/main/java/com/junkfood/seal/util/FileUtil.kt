@@ -98,10 +98,23 @@ object FileUtil {
             }
         }
 
-    fun deleteFile(path: String) =
-        path.runCatching {
-            if (!File(path).delete()) DocumentFile.fromSingleUri(context, Uri.parse(this))?.delete()
+    /** Deletes a downloaded media file and known yt-dlp sidecars without touching other media. */
+    fun deleteDownloadWithSidecars(path: String): Result<Int> = runCatching {
+        val uri = Uri.parse(path)
+        if (uri.scheme != null && uri.scheme != "file") {
+            return@runCatching if (DocumentFile.fromSingleUri(context, uri)?.delete() == true) {
+                1
+            } else {
+                0
+            }
         }
+
+        val deletedPaths = deleteLocalDownloadWithSidecars(File(uri.path ?: path))
+        if (deletedPaths.isNotEmpty()) {
+            MediaScannerConnection.scanFile(context, deletedPaths.toTypedArray(), null, null)
+        }
+        deletedPaths.size
+    }
 
     @CheckResult
     fun scanFileToMediaLibraryPostDownload(title: String, downloadDir: String): List<String> =

@@ -61,7 +61,11 @@ object DatabaseUtil {
 
     suspend fun deleteInfoList(infoList: List<DownloadedVideoInfo>, deleteFile: Boolean = false) {
         dao.deleteInfoList(infoList)
-        infoList.forEach { info -> if (deleteFile) FileUtil.deleteFile(info.videoPath) }
+        if (deleteFile) {
+            infoList.map(DownloadedVideoInfo::videoPath).distinct().forEach {
+                FileUtil.deleteDownloadWithSidecars(it)
+            }
+        }
     }
 
     suspend fun getInfoById(id: Int): DownloadedVideoInfo = dao.getInfoById(id)
