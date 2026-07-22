@@ -29,7 +29,7 @@ The universal debug APK is written under `app/build/outputs/apk/generic/debug/`.
 
 ## Project Status
 
-Version 3.5 focuses on a faster channel-download workflow and clearer download-mode tabs without removing Seal's custom scripts or downloader. The Kotlin source namespace remains `com.junkfood.seal` to minimize divergence from upstream; Walrus uses the distinct Android application ID `com.v8065791.walrus`.
+Version 3.6 downloads selected channel entries as independent tasks and can remove downloaded media together with its related yt-dlp sidecars. The Kotlin source namespace remains `com.junkfood.seal` to minimize divergence from upstream; Walrus uses the distinct Android application ID `com.v8065791.walrus`.
 
 ## Contributing
 
