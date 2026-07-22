@@ -37,7 +37,7 @@ fun RemoveItemDialog(
                 )
                 CheckBoxItem(
                     modifier = Modifier.padding(horizontal = 12.dp),
-                    text = stringResource(R.string.delete_file),
+                    text = stringResource(R.string.delete_file_and_related),
                     checked = deleteFile,
                     onValueChange = onDeleteFileToggled,
                 )

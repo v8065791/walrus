@@ -558,7 +558,7 @@ fun VideoListPage(viewModel: VideoListViewModel = koinViewModel(), onNavigateBac
                     CheckBoxItem(
                         modifier = Modifier.padding(horizontal = 12.dp),
                         text =
-                            stringResource(R.string.delete_file) +
+                            stringResource(R.string.delete_file_and_related) +
                                 " (${selectedFileSizeSum.toFileSizeText()})",
                         checked = deleteFile,
                     ) {
