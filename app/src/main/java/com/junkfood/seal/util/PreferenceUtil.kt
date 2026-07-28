@@ -93,6 +93,10 @@ const val PRIVATE_DIRECTORY = "private_directory"
 const val CROP_ARTWORK = "crop_artwork"
 const val EMBED_THUMBNAIL = "embed_thumbnail"
 const val FORMAT_SELECTION = "format_selection"
+// When enabled, a plain preset "Download" of a playlist/channel URL first probes
+// the URL and, if it resolves to multiple entries, shows the item-selection page
+// instead of silently downloading every item. Single videos still download directly.
+const val PLAYLIST_ITEM_SELECTION = "playlist_item_selection"
 const val VIDEO_CLIP = "video_clip"
 const val SHOW_SPONSOR_MSG = "sponsor_msg_v1"
 const val PROXY = "proxy"
@@ -212,6 +216,7 @@ private val StringPreferenceDefaults =
 private val BooleanPreferenceDefaults =
     mapOf(
         FORMAT_SELECTION to true,
+        PLAYLIST_ITEM_SELECTION to true,
         CONFIGURE to true,
         CELLULAR_DOWNLOAD to false,
         YT_DLP_AUTO_UPDATE to true,

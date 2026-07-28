@@ -82,6 +82,7 @@ import com.junkfood.seal.ui.component.PreferenceSwitchWithDivider
 import com.junkfood.seal.ui.component.SealDialog
 import com.junkfood.seal.ui.page.download.NotificationPermissionDialog
 import com.junkfood.seal.util.CONFIGURE
+import com.junkfood.seal.util.PLAYLIST_ITEM_SELECTION
 import com.junkfood.seal.util.CUSTOM_COMMAND
 import com.junkfood.seal.util.DEBUG
 import com.junkfood.seal.util.DISABLE_PREVIEW
@@ -271,6 +272,23 @@ fun GeneralDownloadPreferences(onNavigateBack: () -> Unit, navigateToTemplate: (
                         onClick = {
                             configureBeforeDownload = !configureBeforeDownload
                             PreferenceUtil.updateValue(CONFIGURE, configureBeforeDownload)
+                        },
+                    )
+                }
+
+                item {
+                    var playlistItemSelection by PLAYLIST_ITEM_SELECTION.booleanState
+                    PreferenceSwitch(
+                        title = stringResource(id = R.string.playlist_item_selection),
+                        description = stringResource(id = R.string.playlist_item_selection_desc),
+                        icon = Icons.Outlined.DoneAll,
+                        isChecked = playlistItemSelection,
+                        onClick = {
+                            playlistItemSelection = !playlistItemSelection
+                            PreferenceUtil.updateValue(
+                                PLAYLIST_ITEM_SELECTION,
+                                playlistItemSelection,
+                            )
                         },
                     )
                 }

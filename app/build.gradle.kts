@@ -47,7 +47,7 @@ android {
         applicationId = "com.v8065791.walrus"
         minSdk = 24
         targetSdk = 35
-        versionCode = 306_000_400
+        versionCode = 307_000_400
         check(versionCode == currentVersionCode)
 
         versionName = baseVersionName

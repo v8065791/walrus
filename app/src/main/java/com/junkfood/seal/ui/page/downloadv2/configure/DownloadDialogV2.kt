@@ -128,6 +128,7 @@ import com.junkfood.seal.util.DownloadType.Video
 import com.junkfood.seal.util.DownloadType.entries
 import com.junkfood.seal.util.DownloadUtil
 import com.junkfood.seal.util.FORMAT_SELECTION
+import com.junkfood.seal.util.PLAYLIST_ITEM_SELECTION
 import com.junkfood.seal.util.PreferenceStrings
 import com.junkfood.seal.util.PreferenceUtil
 import com.junkfood.seal.util.PreferenceUtil.getBoolean
@@ -637,7 +638,18 @@ private fun ConfigurePage(
                 )
                 val resolvedPreferences = preferences.copy(extractAudio = selectedType == Audio)
                 if (url.toYouTubeChannelSource() != null) {
+                    // YouTube channels keep their dedicated tabbed selection flow.
                     onActionPost(Action.FetchPlaylist(url = url, preferences = resolvedPreferences))
+                } else if (PLAYLIST_ITEM_SELECTION.getBoolean()) {
+                    // Other playlists/channels: probe first and prompt for item
+                    // selection instead of silently grabbing every entry; single
+                    // videos still download straight away.
+                    onActionPost(
+                        Action.DownloadSmart(
+                            urlList = listOf(url),
+                            preferences = resolvedPreferences,
+                        )
+                    )
                 } else {
                     onActionPost(
                         Action.DownloadWithPreset(

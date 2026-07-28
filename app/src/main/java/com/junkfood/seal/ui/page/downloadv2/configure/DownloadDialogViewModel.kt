@@ -83,6 +83,18 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
             val preferences: DownloadUtil.DownloadPreferences,
         ) : Action
 
+        /**
+         * Preset download that first probes a single URL: if it resolves to a
+         * playlist (multiple entries) the item-selection page is shown so the
+         * user can pick what to grab; a single video is enqueued directly.
+         * Used for non-YouTube-channel URLs — channels keep their dedicated
+         * [FetchPlaylist] tab flow.
+         */
+        data class DownloadSmart(
+            val urlList: List<String>,
+            val preferences: DownloadUtil.DownloadPreferences,
+        ) : Action
+
         data class RunCommand(
             val url: String,
             val template: CommandTemplate,
@@ -115,6 +127,7 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
                 is Action.FetchPlaylist -> fetchPlaylist(this)
                 is Action.FetchChannelTab -> fetchChannelTab(tab)
                 is Action.DownloadWithPreset -> downloadWithPreset(urlList, preferences)
+                is Action.DownloadSmart -> downloadSmart(this)
                 is Action.RunCommand -> runCommand(url, template, preferences)
                 Action.HideSheet -> hideDialog()
                 is Action.ShowSheet -> showDialog(this)
@@ -277,6 +290,61 @@ class DownloadDialogViewModel(private val downloader: DownloaderV2) : ViewModel(
     ) {
         urlList.forEach { downloader.enqueue(Task(url = it, preferences = preferences)) }
         hideDialog()
+    }
+
+    private fun downloadSmart(action: Action.DownloadSmart) {
+        val (urlList, preferences) = action
+        // Only a single URL can be meaningfully probed for playlist membership;
+        // batches keep the plain preset behaviour (enqueue every URL as-is).
+        if (urlList.size != 1) {
+            downloadWithPreset(urlList, preferences)
+            return
+        }
+        val url = urlList.first()
+        val taskKey = "FetchPlaylist_$url"
+        val job =
+            viewModelScope.launch(Dispatchers.IO) {
+                DownloadUtil.getPlaylistOrVideoInfo(
+                        playlistURL = url,
+                        downloadPreferences = preferences,
+                        taskKey = taskKey,
+                    )
+                    .onSuccess { info ->
+                        withContext(Dispatchers.Main) {
+                            when (info) {
+                                is PlaylistResult -> {
+                                    // Multiple entries: let the user choose which to grab.
+                                    mSelectionStateFlow.update {
+                                        SelectionState.PlaylistSelection(
+                                            result = info,
+                                            preferences = preferences,
+                                        )
+                                    }
+                                }
+
+                                is VideoInfo -> {
+                                    // Single item: behave like a plain preset download.
+                                    downloader.enqueue(Task(url = url, preferences = preferences))
+                                }
+                            }
+                            hideDialog()
+                        }
+                    }
+                    .onFailure { th ->
+                        withContext(Dispatchers.Main) {
+                            // Reuse FetchPlaylist as the retry action so ErrorPage (which
+                            // only renders Fetch* actions) can show and re-run the probe.
+                            mSheetStateFlow.update {
+                                SheetState.Error(
+                                    action =
+                                        Action.FetchPlaylist(url = url, preferences = preferences),
+                                    throwable = th,
+                                )
+                            }
+                        }
+                    }
+            }
+        mSheetStateFlow.update { SheetState.Loading(taskKey = taskKey, job = job) }
     }
 
     private fun runCommand(
